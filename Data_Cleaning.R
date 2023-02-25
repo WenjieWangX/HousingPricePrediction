@@ -8,12 +8,12 @@ library(ggplot2)
 #Real Estate data analysis
 #############################
 #Real Estate Data from 2001 to 2020 with twon data
-Real_Estate_Sales_2001_2020_GL <- read_csv("Real_Estate_Sales_2001-2020_GL.csv", 
+Real_Estate_Sales_2001_2020_GL <- read_csv("Data/Real_Estate_Sales_2001-2020_GL.csv", 
                                            col_types = cols(`Date Recorded` = col_date(format = "%m/%d/%Y")))
 
 Real_Estate_Sales_new <- Real_Estate_Sales_2001_2020_GL %>% drop_na(Town)
 
-CT_County_Town <- read_excel("CT_County_Town.xlsx")
+CT_County_Town <- read_excel("Data/CT_County_Town.xlsx")
 
 Tolland <- CT_County_Town %>% filter(County == "Tolland") %>% dplyr::select("Town name")
 New_Haven <- CT_County_Town %>% filter(County == "New Haven") %>% dplyr::select("Town name")
@@ -47,7 +47,7 @@ Real.Estate.County <- rbind(Real.Estate.Tolland,
 # nrow(Real.Estate.Tolland)
 # View(Real.Estate.Tolland)
 
-Covid_start_date <- as.Date("2020-01-01")
+Covid_start_date <- as.Date("2019-01-01")
 
 Real.Estate.County <- Real.Estate.County %>% 
   filter(`Date Recorded` > Covid_start_date) %>% 
@@ -83,7 +83,7 @@ View(Real.Estate.County.Median)
 #############################
 #COVID 19 data analysis
 #############################
-COVID.19.County <- read_csv("COVID-19_Cases__Hospitalizations__and_Deaths__By_County__-_ARCHIVE.csv", 
+COVID.19.County <- read_csv("Data/COVID-19_Cases__Hospitalizations__and_Deaths__By_County__-_ARCHIVE.csv", 
                             col_types = cols(`Date updated` = col_date(format = "%m/%d/%Y")))
 COVID.19.County <- COVID.19.County %>% 
   mutate(Month = months(`Date updated`),
@@ -115,8 +115,31 @@ merge_data <- merge(begin_month, end_month, by=c("mon_yr", "County","County code
 merge.data.case.per.month <- merge_data %>% dplyr::select(c("County","Month","Year","Total cases.x","Total cases.y","mon_yr"))
 merge.data.case.per.month <- merge.data.case.per.month %>% mutate(`Total Case` = `Total cases.y`-`Total cases.x` )
 Covid.19.Month.Cases <- merge.data.case.per.month %>% dplyr::select(c("County","Month","Year","mon_yr", "Total Case"))
-View(Covid.19.Month.Cases)
 #merge.data.case.per.month$mon_yr <- as.Date(paste(merge.data.case.per.month$mon_yr,"-01",sep=""))
 
-House.Covid <- merge(Real.Estate.County.Median, Covid.19.Month.Cases, by=c("mon_yr","County"))
+House.Covid <- merge(x=Real.Estate.County.Median, y=Covid.19.Month.Cases, by=c("mon_yr","County"), all.x = TRUE)
+House.Covid$Month <- month(ym(House.Covid$mon_yr))
+House.Covid$Year <- year(ym(House.Covid$mon_yr))
+House.Covid$`Total Case`[is.na(House.Covid$`Total Case`)] = 0
+House.Covid <- House.Covid %>% mutate(confirm = ifelse(`Total Case` > 0, 1, 0))
+House.Covid$County <- factor(House.Covid$County)
+House.Covid$`Property Type` <- factor(House.Covid$`Property Type`)
+House.Covid$`Residential Type` <- factor(House.Covid$`Residential Type`)
 View(House.Covid)
+
+###########################
+#Inflation Rate
+###########################
+Inflation <- read_excel("Data/Inflation_NY_data.xls")
+colnames(Inflation) <- c("date", "inflation_rate")
+Inflation$mon_yr = format(Inflation$date, "%Y-%m") 
+
+House.Covid.Inflation <- merge(House.Covid, Inflation, by="mon_yr")
+
+
+
+
+
+
+
+
